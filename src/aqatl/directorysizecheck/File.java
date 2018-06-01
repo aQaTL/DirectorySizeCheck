@@ -52,17 +52,26 @@ public class File {
 		return size.get();
 	}
 
-	public double getSizeIn(Multiple multiple) {
+	public double getSize(Multiple multiple) {
 		return size.size / multiple.multiplier;
 	}
 
-	public Size getSizeHumanReadable() {
-		Multiple[] mutliples = Multiple.values();
-		Multiple[] decimalMultiples = Arrays.copyOfRange(mutliples, 0, mutliples.length / 2 + 1);
+	public Size getSizeHumanReadable(MultipleType type) {
+		Multiple[] multiples = Multiple.values();
 
-		for (Multiple multiple : decimalMultiples) {
+		int from, to;
+		if (type == MultipleType.DECIMAL) {
+			from = 1;
+			to = multiples.length / 2 + 1;
+		} else {
+			from = multiples.length / 2 + 1;
+			to = multiples.length;
+		}
+		Multiple[] usedMultiples = Arrays.copyOfRange(multiples, from, to);
+
+		for (Multiple multiple : usedMultiples) {
 			double humanReadableSize = this.size.size / multiple.multiplier;
-			if (humanReadableSize < 1000) {
+			if (humanReadableSize < type.multiplier && humanReadableSize > 1.0) {
 				return new Size(humanReadableSize, multiple);
 			}
 		}
