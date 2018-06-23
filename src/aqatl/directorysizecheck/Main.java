@@ -6,7 +6,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Main {
 
@@ -34,18 +38,31 @@ public class Main {
 	}
 
 	public static void listDirectories(String dirPath, MultipleType type) throws IOException {
-		Files.list(Paths.get(dirPath)).
+		List<File> filesAndDirectories = Files.list(Paths.get(dirPath)).
 				parallel().
-				filter(path -> Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)).
 				map(File::NewFile).
 				filter(Optional::isPresent).
-				forEach(opt -> {
-					File file = opt.get();
-					File.Size size = file.getSizeHumanReadable(type);
+				map(Optional::get).
+				collect(Collectors.toList());
 
-					System.out.printf("%-10s%s\n", String.format("%.1f", size.size) + size.multiple.shortName,
-							file.getPath().getFileName().toString());
-				});
+		filesAndDirectories.
+				parallelStream().
+				filter(file -> Files.isDirectory(file.getPath(), LinkOption.NOFOLLOW_LINKS)).
+				forEach(file -> printFileWithSize(file, type));
+
+		long sizeOfFilesInCurrentDir = filesAndDirectories.
+				parallelStream().
+				mapToLong(file -> (long) file.getSize(Multiple.Byte)).
+				sum();
+
+		printFileWithSize(new File(Paths.get("."), sizeOfFilesInCurrentDir), type);
+	}
+
+	private static void printFileWithSize(File file, MultipleType type) {
+		FileSize size = file.getSize().makeHumanReadable(type);
+
+		System.out.printf("%-10s%s\n", String.format("%.1f", size.size) + size.multiple.shortName,
+				file.getPath().getFileName().toString());
 	}
 
 	private static CommandLine parseArgs(String[] args) {
